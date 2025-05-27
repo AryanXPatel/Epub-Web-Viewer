@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self' blob:; script-src 'self' 'unsafe-inline'; style-src 'self' blob: 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' blob: data: *; frame-src blob: data:; object-src blob: data:; form-action 'none';"
+    />
+    <title>EPUB Reader - Patel Aryan</title>
+    <script type="style" src="../styles/main.css"></script>
+
+    <style>
+      :root {
+        --bg-primary: #fafafa;
+        --bg-secondary: #ffffff;
+        --bg-tertiary: #f5f5f5;
+        --text-primary: #1a1a1a;
+        --text-secondary: #666666;
+        --text-tertiary: #888888;
+        --border-color: #e5e5e5;
+        --accent: #007aff;
+        --accent-hover: #0056cc;
+        --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.04);
+        --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.08);
+        --shadow-heavy: 0 8px 32px rgba(0, 0, 0, 0.12);
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --active-bg: rgba(0, 0, 0, 0.05);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-primary: #0a0a0a;
+          --bg-secondary: #1a1a1a;
+          --bg-tertiary: #2a2a2a;
+          --text-primary: #ffffff;
+          --text-secondary: #cccccc;
+          --text-tertiary: #888888;
+          --border-color: #333333;
+          --accent: #0a84ff;
+          --accent-hover: #3399ff;
+          --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.2);
+          --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.3);
+          --shadow-heavy: 0 8px 32px rgba(0, 0, 0, 0.4);
+          --active-bg: rgba(255, 255, 255, 0.1);
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+          sans-serif;
+        background-color: #111827 !important;
+        color: var(--text-primary);
+        line-height: 1.6;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+        overflow: hidden; /* Hide scrollbars */
+      }
+      /* Hide webkit scrollbar */
+      html::-webkit-scrollbar,
+      body::-webkit-scrollbar {
+        display: none;
+      }
+      #drop-target {
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        visibility: visible;
+      }
+      /* Ensure content fills viewport without scrolling */
+      body {
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+      }
+
+      /* Make sure toolbar spans full width */
+      .toolbar {
+        width: 100%;
+        overflow: hidden;
+      }
+      #drop-target > div {
+        max-width: 400px;
+        padding: 2rem;
+        border: 2px dashed var(--border-color);
+        border-radius: var(--radius-md);
+        transition: border-color 0.3s ease;
+      }
+
+      #drop-target:hover > div {
+        border-color: var(--accent);
+      }
+
+      #drop-target h1 {
+        font-weight: 900;
+        margin: 1rem 0;
+      }
+
+      #drop-target p {
+        margin: 0;
+      }
+
+      .icon {
+        display: block;
+        fill: none;
+        stroke: currentcolor;
+        stroke-width: 2px;
+        transition: all 0.3s ease;
+      }
+
+      .empty-state-icon {
+        margin: auto;
+      }
+
+      #file-button {
+        font: inherit;
+        background: none;
+        border: 0;
+        padding: 0;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+
+      .toolbar {
+        position: absolute;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        height: 64px;
+        padding: 12px 20px;
+        background: var(--bg-secondary);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--border-color);
+        transition: all 0.3s ease;
+        visibility: hidden;
+      }
+
+      .toolbar button {
+        padding: 12px;
+        border-radius: var(--radius-sm);
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .toolbar button:hover {
+        background: var(--active-bg);
+        color: var(--text-primary);
+        transform: scale(1.05);
+      }
+
+      .toolbar button:active {
+        transform: scale(0.98);
+      }
+
+      #header-bar {
+        top: 0;
+        border-radius: 0 0 var(--radius-md) var(--radius-md);
+        border-top: none;
+        height: 40px !important;
+      }
+
+      #nav-bar {
+        bottom: 0;
+        border-radius: var(--radius-md) var(--radius-md) 0 0;
+        border-bottom: none;
+        height: 20px !important;
+      }
+
+      #progress-slider {
+        flex-grow: 1;
+        margin: 0 20px;
+        height: 6px;
+        background: var(--bg-tertiary);
+        border-radius: 3px;
+        outline: none;
+        appearance: none;
+        visibility: hidden;
+        transition: all 0.2s ease;
+      }
+
+      #progress-slider::-webkit-slider-thumb {
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+        box-shadow: var(--shadow-light);
+        transition: all 0.2s ease;
+      }
+
+      #progress-slider::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+        box-shadow: var(--shadow-medium);
+      }
+
+      #progress-slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+        border: none;
+        box-shadow: var(--shadow-light);
+      }
+
+      #side-bar {
+        visibility: hidden;
+        position: absolute;
+        z-index: 20;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 360px;
+        transform: translateX(-360px);
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        box-shadow: var(--shadow-heavy);
+        border-right: 1px solid var(--border-color);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      #side-bar.show {
+        visibility: visible;
+        transform: translateX(0);
+      }
+
+      #dimming-overlay {
+        visibility: hidden;
+        position: fixed;
+        z-index: 15;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(4px);
+        opacity: 0;
+        transition: all 0.3s ease;
+      }
+
+      #dimming-overlay.show {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      #side-bar-header {
+        padding: 2rem;
+        display: flex;
+        border-bottom: 1px solid var(--border-color);
+        align-items: center;
+        background: var(--bg-tertiary);
+      }
+
+      #side-bar-cover {
+        height: 120px;
+        width: 80px;
+        border-radius: var(--radius-sm);
+        border: none;
+        background: var(--bg-primary);
+        box-shadow: var(--shadow-medium);
+        margin-right: 1.5rem;
+        object-fit: cover;
+      }
+
+      #side-bar-cover:not([src]) {
+        display: none;
+      }
+
+      #side-bar-title {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        line-height: 1.3;
+        color: var(--text-primary);
+      }
+
+      #side-bar-author {
+        margin: 0;
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+
+      #toc-view {
+        padding: 1rem;
+        overflow-y: auto;
+        flex-grow: 1;
+      }
+
+      #toc-view::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      #toc-view::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      #toc-view::-webkit-scrollbar-thumb {
+        background: var(--border-color);
+        border-radius: 3px;
+      }
+
+      #toc-view::-webkit-scrollbar-thumb:hover {
+        background: var(--text-tertiary);
+      }
+
+      #toc-view li,
+      #toc-view ol {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      #toc-view a,
+      #toc-view span {
+        display: block;
+        border-radius: var(--radius-sm);
+        padding: 12px 16px;
+        margin: 4px 0;
+        transition: all 0.2s ease;
+        font-weight: 500;
+      }
+
+      #toc-view a {
+        color: var(--text-primary);
+        text-decoration: none;
+      }
+
+      #toc-view a:hover {
+        background: var(--active-bg);
+        transform: translateX(4px);
+      }
+
+      #toc-view span {
+        color: var(--text-tertiary);
+      }
+
+      .menu-container {
+        position: relative;
+      }
+
+      .menu,
+      .menu ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .menu {
+        visibility: hidden;
+        position: absolute;
+        right: 0;
+        top: calc(100% + 8px);
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-heavy);
+        border: 1px solid var(--border-color);
+        padding: 8px;
+        cursor: default;
+        min-width: 200px;
+        transform: translateY(-8px);
+        opacity: 0;
+        transition: all 0.2s ease;
+        z-index: 1000; /* Ensure it appears above other elements */
+      }
+
+      .menu.show {
+        visibility: visible;
+        transform: translateY(0);
+        opacity: 1;
+      }
+
+      .menu li {
+        padding: 12px 16px;
+        padding-left: 36px;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-weight: 500;
+        position: relative;
+      }
+
+      .menu li:hover {
+        background: var(--active-bg);
+      }
+
+      .menu li[aria-checked="true"]::before {
+        content: "";
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      #menu-button {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px; /* Space between buttons */
+      }
+
+      /* Enhanced animations */
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      #drop-target > div {
+        animation: fadeInUp 0.6s ease-out;
+      }
+
+      /* Responsive design */
+      @media (max-width: 768px) {
+        #side-bar {
+          width: 300px;
+          transform: translateX(-300px);
+        }
+
+        #drop-target {
+          padding: 1rem;
+        }
+
+        #drop-target > div {
+          padding: 2rem 1.5rem;
+        }
+
+        #drop-target h1 {
+          font-size: 1.5rem;
+        }
+
+        .toolbar {
+          height: 56px;
+          padding: 8px 16px;
+        }
+
+        .toolbar button {
+          padding: 10px;
+        }
+
+        #progress-slider {
+          margin: 0 16px;
+        }
+      }
+
+      /* Force text visibility in iframe content */
+      iframe * {
+        color: inherit !important;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        iframe {
+          background-color: var(--bg-primary) !important;
+          color: var(--text-primary) !important;
+        }
+      }
+
+      @media (prefers-color-scheme: light) {
+        iframe {
+          background-color: var(--bg-primary) !important;
+          color: var(--text-primary) !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <input type="file" id="file-input" hidden />
+    <div id="drop-target" class="filter">
+      <div>
+        <svg
+          width="135px"
+          height="135px"
+          viewBox="0 0 32 32"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+          <g
+            id="SVGRepo_tracerCarrier"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          ></g>
+          <g id="SVGRepo_iconCarrier">
+            <path
+              d="M27 6H5C3.34315 6 2 7.34315 2 9V23C2 24.6569 3.34315 26 5 26H27C28.6569 26 30 24.6569 30 23V9C30 7.34315 28.6569 6 27 6Z"
+              fill="#07227c"
+            ></path>
+            <path
+              d="M16 6V26H5C4.20435 26 3.44129 25.6839 2.87868 25.1213C2.31607 24.5587 2 23.7956 2 23V9C2 8.20435 2.31607 7.44129 2.87868 6.87868C3.44129 6.31607 4.20435 6 5 6H16Z"
+              fill="#046a91"
+            ></path>
+            <path
+              d="M12 6V20C12 20.2652 11.8946 20.5196 11.7071 20.7071C11.5196 20.8946 11.2652 21 11 21C10.7348 21 10.4804 20.8946 10.2929 20.7071C10.1054 20.5196 10 20.2652 10 20V6H12Z"
+              fill="#F5F5F5"
+            ></path>
+            <path
+              d="M25 13H20C19.7348 13 19.4804 12.8946 19.2929 12.7071C19.1054 12.5196 19 12.2652 19 12C19 11.7348 19.1054 11.4804 19.2929 11.2929C19.4804 11.1054 19.7348 11 20 11H25C25.2652 11 25.5196 11.1054 25.7071 11.2929C25.8946 11.4804 26 11.7348 26 12C26 12.2652 25.8946 12.5196 25.7071 12.7071C25.5196 12.8946 25.2652 13 25 13Z"
+              fill="#E0E0E0"
+            ></path>
+            <path
+              d="M25 17H22C21.7348 17 21.4804 16.8946 21.2929 16.7071C21.1054 16.5196 21 16.2652 21 16C21 15.7348 21.1054 15.4804 21.2929 15.2929C21.4804 15.1054 21.7348 15 22 15H25C25.2652 15 25.5196 15.1054 25.7071 15.2929C25.8946 15.4804 26 15.7348 26 16C26 16.2652 25.8946 16.5196 25.7071 16.7071C25.5196 16.8946 25.2652 17 25 17Z"
+              fill="#E0E0E0"
+            ></path>
+            <path
+              d="M25 21H20C19.7348 21 19.4804 20.8946 19.2929 20.7071C19.1054 20.5196 19 20.2652 19 20C19 19.7348 19.1054 19.4804 19.2929 19.2929C19.4804 19.1054 19.7348 19 20 19H25C25.2652 19 25.5196 19.1054 25.7071 19.2929C25.8946 19.4804 26 19.7348 26 20C26 20.2652 25.8946 20.5196 25.7071 20.7071C25.5196 20.8946 25.2652 21 25 21Z"
+              fill="#E0E0E0"
+            ></path>
+          </g>
+        </svg>
+        <h1>Drop your EPUB here!</h1>
+        <p>Or <button id="file-button">choose a file</button> to open it.</p>
+      </div>
+    </div>
+    <div id="dimming-overlay" aria-hidden="true"></div>
+    <div id="side-bar">
+      <div id="side-bar-header">
+        <img id="side-bar-cover" />
+        <div>
+          <h1 id="side-bar-title"></h1>
+          <p id="side-bar-author"></p>
+        </div>
+      </div>
+      <div id="toc-view"></div>
+    </div>
+    <div id="header-bar" class="toolbar">
+      <button id="side-bar-button" aria-label="Show sidebar">
+        <svg class="icon" width="24" height="24" aria-hidden="true">
+          <path d="M 4 6 h 16 M 4 12 h 16 M 4 18 h 16"></path>
+        </svg>
+      </button>
+      <div id="menu-button" class="menu-container">
+        <button aria-label="Show settings" aria-haspopup="true">
+          <svg class="icon" width="24" height="24" aria-hidden="true">
+            <path
+              d="M5 12.7a7 7 0 0 1 0-1.4l-1.8-2 2-3.5 2.7.5a7 7 0 0 1 1.2-.7L10 3h4l.9 2.6 1.2.7 2.7-.5 2 3.4-1.8 2a7 7 0 0 1 0 1.5l1.8 2-2 3.5-2.7-.5a7 7 0 0 1-1.2.7L14 21h-4l-.9-2.6a7 7 0 0 1-1.2-.7l-2.7.5-2-3.4 1.8-2Z"
+            ></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+        <button id="switch-mode" aria-label="Switch Mode">
+          <svg id="sun" class="icon" width="24" height="24" aria-hidden="true">
+            <path
+              d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"
+            ></path>
+          </svg>
+          <svg
+            id="moon"
+            class="icon"
+            width="24"
+            height="24"
+            aria-hidden="true"
+            style="display: none"
+          >
+            <path
+              d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"
+            ></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div id="nav-bar" class="toolbar">
+      <button id="left-button" aria-label="Go left">
+        <svg class="icon" width="24" height="24" aria-hidden="true">
+          <path d="M 15 6 L 9 12 L 15 18"></path>
+        </svg>
+      </button>
+      <input
+        id="progress-slider"
+        type="range"
+        min="0"
+        max="1"
+        step="any"
+        list="tick-marks"
+      />
+      <datalist id="tick-marks"></datalist>
+      <button id="right-button" aria-label="Go right">
+        <svg class="icon" width="24" height="24" aria-hidden="true">
+          <path d="M 9 6 L 15 12 L 9 18"></path>
+        </svg>
+      </button>
+    </div>
+
+    <script type="module" src="/js/reader.js"></script>
+    <script type="module" src="../src/ui/mode.js"></script>
+  </body>
+</html>

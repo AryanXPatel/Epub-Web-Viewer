@@ -1,0 +1,42 @@
+:root {
+  --active-bg: rgba(0, 0, 0, 0.05);
+}
+
+@supports (color-scheme: light dark) {
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --active-bg: rgba(255, 255, 255, 0.1);
+    }
+  }
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+#drop-target {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.icon {
+  display: block;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2px;
+}
+
+#file-button {
+  font: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
