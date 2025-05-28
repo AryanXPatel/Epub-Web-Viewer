@@ -1,6 +1,7 @@
 import { View } from "./view.js";
-import { createTOCView } from "./ui/tree.js";
-import { createMenu } from "./ui/menu.js";
+
+import { createTOCView } from "./tree.js";
+import { createMenu } from "./menu.js";
 
 const isZip = async (file) => {
   const arr = new Uint8Array(await file.slice(0, 4).arrayBuffer());
@@ -11,7 +12,7 @@ const isZip = async (file) => {
 
 const makeZipLoader = async (file) => {
   const { configure, ZipReader, BlobReader, TextWriter, BlobWriter } =
-    await import("./ui/vendor/zip.js");
+    await import("./zip.js");
   configure({ useWebWorkers: false });
   const reader = new ZipReader(new BlobReader(file));
   const entries = await reader.getEntries();
